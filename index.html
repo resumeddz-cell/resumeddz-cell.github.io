@@ -611,6 +611,8 @@ body.on-year .ypage{display:block}
 .next-steps li::before{content:counter(n);grid-row:span 2;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:linear-gradient(135deg,var(--pink),var(--cyan));color:#0e1a33}
 .next-steps span{color:var(--ink-2);font-size:.9rem}
 .small-hint{font-size:.88rem;color:var(--ink-2);background:#2aabee14;border-radius:14px;padding:10px 14px;max-width:440px;margin:0 auto 16px!important}
+.device-note{display:flex;gap:10px;align-items:flex-start;margin:4px 0 12px;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,rgba(255,150,197,.16),rgba(0,255,247,.12));border:1px solid var(--line);font-size:.86rem;line-height:1.45;color:var(--ink-2);text-align:left}
+.device-note i{font-style:normal;font-size:1.15rem;line-height:1.2}.device-note b{color:var(--ink)}
 .form-err{display:none;margin-top:12px;padding:12px 14px;border-radius:14px;background:#fdecec;color:#b42318;font-size:.9rem;font-weight:500}
 .form-err.show{display:block}
 .submit[disabled]{opacity:.7;cursor:wait}
@@ -1521,6 +1523,7 @@ body.lock{overflow:hidden}
           </div>
           <em id="facErr" class="solo"></em></div>
         <label class="f" id="fAnnexe" hidden><span>Nom de l'annexe</span><input name="annexe" placeholder="Ville de l'annexe"><em></em></label>
+        <div class="device-note" id="devNoteSignup"><i>📱</i><span><b>Un compte = un seul appareil.</b> Une fois validé, votre compte s'ouvrira uniquement sur le premier appareil où vous vous connectez. Connectez-vous donc sur le téléphone ou l'ordinateur où vous allez étudier. Pour changer d'appareil plus tard, contactez-nous sur Telegram.</span></div>
         <label class="chk"><input type="checkbox" name="cgu"><span>J'accepte les conditions d'utilisation de Resumed.</span></label><em id="cguErr" class="solo"></em>
         <div class="form-err" id="formErr" role="alert"></div>
         <button class="btn btn-primary submit" type="submit">Créer mon compte <span class="arr">→</span></button>
@@ -1530,10 +1533,11 @@ body.lock{overflow:hidden}
       <div id="authDone" class="auth-done" hidden>
         <div class="ok">✓</div>
         <h2>Bienvenue, <span id="doneName"></span> !</h2>
-        <p>Votre compte est créé. Il reste deux étapes :</p>
+        <p>Votre compte est créé. Il reste trois étapes :</p>
         <ol class="next-steps">
           <li><b>Confirmez votre e-mail</b><span>Ouvrez le message envoyé à <b id="doneMail"></b> et cliquez sur le lien (pensez aux spams).</span></li>
           <li><b>Validation par l'équipe</b><span>Votre compte sera activé après vérification. Vous pourrez alors vous connecter.</span></li>
+          <li><b>Connectez-vous sur votre appareil d'étude</b><span>Un compte = un seul appareil : le premier où vous vous connectez après la validation devient le vôtre. Choisissez le téléphone ou l'ordinateur où vous allez étudier.</span></li>
         </ol>
         <p class="small-hint">💡 Une fois votre compte validé, liez votre Telegram (menu « Mon compte ») pour vous connecter en un clic.</p>
         <div class="done-act"><a class="btn btn-tg" href="https://resumeddz-cell.github.io/resumed/">Aller au planner →</a><a class="btn btn-ghost" href="https://t.me/resumed_inscription" target="_blank" rel="noopener">Une question ? Telegram</a></div>
@@ -1561,6 +1565,7 @@ body.lock{overflow:hidden}
         <div class="tg-box" id="tgLoginBox" hidden><div class="tg-slot" id="tgLoginBtn"></div><p class="tg-hint">Pour les comptes déjà liés à Telegram.</p><div class="or"><span>ou avec votre e-mail</span></div></div>
         <label class="f"><span>Adresse e-mail</span><input name="email" type="email" autocomplete="email" placeholder="vous@exemple.com"><em></em></label>
         <label class="f"><span>Mot de passe</span><div class="pw"><input name="pw" type="password" autocomplete="current-password" placeholder="Votre mot de passe"><button type="button" class="eye" aria-label="Afficher le mot de passe">👁</button></div><em></em></label>
+        <div class="device-note" id="devNoteLogin"><i>📱</i><span><b>Un seul appareil par compte :</b> le premier où vous vous connectez après la validation. Choisissez celui où vous allez étudier.</span></div>
         <div class="form-err" id="loginErr" role="alert"></div>
         <button class="btn btn-primary submit" type="submit">Se connecter <span class="arr">→</span></button>
         <p class="alt"><a href="https://resumeddz-cell.github.io/resumed/#/forgot">Mot de passe oublié ?</a></p>
@@ -2047,19 +2052,46 @@ const Session = (function(){
   }
   const uid = () => { const s = read(); if (!s) return null; if (s.user && s.user.id) return s.user.id;
     try { return JSON.parse(atob(s.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).sub; } catch (e) { return null; } };
+  // Un compte = un seul appareil : identifiant aléatoire gardé dans ce navigateur (partagé avec le planner).
+  const DKEY = 'resumed.device.v1';
+  let memDevice = null, locked = false;
+  function deviceId() {
+    const make = () => (crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join(''));
+    try { let d = localStorage.getItem(DKEY); if (!d || d.length < 16) { d = make(); localStorage.setItem(DKEY, d); } return d; }
+    catch (e) { return memDevice || (memDevice = make()); }
+  }
+  function deviceLabel() {
+    const u = navigator.userAgent || '';
+    const os = /Android/i.test(u) ? 'Android' : /iPhone|iPad|iPod/i.test(u) ? 'iPhone/iPad' : /Windows/i.test(u) ? 'Windows' : /Mac OS/i.test(u) ? 'Mac' : /Linux/i.test(u) ? 'Linux' : 'Appareil';
+    const br = /Edg\//.test(u) ? 'Edge' : /OPR\/|Opera/.test(u) ? 'Opera' : /Firefox\//.test(u) ? 'Firefox' : /Chrome\//.test(u) ? 'Chrome' : /Safari\//.test(u) ? 'Safari' : 'Navigateur';
+    return `${os} · ${br}`;
+  }
+  const DEVICE_MSG = "Ce compte est déjà utilisé sur un autre appareil (un compte = un seul appareil). Pour changer d'appareil, contactez-nous sur Telegram : @resumed_inscription.";
+  async function claim(t) {
+    try { return await call('/rest/v1/rpc/claim_device', { method: 'POST', token: t, body: { p_device: deviceId(), p_label: deviceLabel() } }); }
+    catch (e) { if (e.status === 401) throw e; return 'ok'; }   // réseau ou mise à jour pas encore installée : on ne bloque pas
+  }
   async function load() {
     const t = await token(); if (!t) { me = null; emit(); return null; }
     try {
+      if (await claim(t) === 'other_device') {
+        locked = true; write(null); me = null; emit();
+        call('/auth/v1/logout?scope=local', { method: 'POST', token: t }).catch(() => {});   // ferme seulement CETTE session
+        window.dispatchEvent(new CustomEvent('resumed:device-locked', { detail: DEVICE_MSG }));
+        return null;
+      }
+      locked = false;
       const rows = await call(`/rest/v1/profiles?select=email,display_name,status,role,selected_year,signup_year,telegram_username,telegram_linked_at&id=eq.${uid()}`, { token: t });
       const p = rows && rows[0];
       me = p ? { id: uid(), email: p.email, name: p.display_name || p.email.split('@')[0], status: p.status, admin: p.role === 'admin', year: p.selected_year || p.signup_year || null, tg: p.telegram_linked_at ? (p.telegram_username || 'lié') : null } : null;
     } catch (e) { if (e.status === 401) { write(null); me = null; } }
     emit(); return me;
   }
+  const checked = (r) => { if (locked) { const x = new Error(DEVICE_MSG); x.code = 'other_device'; throw x; } return r; };
   return {
     call, token, load, get me() { return me; }, on(f) { subs.add(f); return () => subs.delete(f); },
-    async useSession(d) { write(keep(d)); return load(); },
-    async login(email, password) { const d = await call('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password } }); write(keep(d)); return load(); },
+    async useSession(d) { write(keep(d)); return checked(await load()); },
+    async login(email, password) { const d = await call('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password } }); write(keep(d)); return checked(await load()); },
     async logout() { const t = (read() || {}).access_token; write(null); me = null; emit(); if (t) { try { await call('/auth/v1/logout', { method: 'POST', token: t }); } catch (e) {} } },
     expired() { write(null); me = null; emit(); },
   };
@@ -2093,12 +2125,16 @@ addEventListener('storage', (e) => { if (e.key === 'resumed.session.v1') Session
       F.pw.value = ''; close();
       toast(me && me.status === 'approved' ? `Bienvenue ${me.name} 👋` : 'Connecté — votre compte attend la validation.');
     } catch (err) {
-      if (err.kind === 'network') show(err.message);
+      if (err.code === 'other_device' || err.kind === 'network') show(err.message);
       else if (err.code === 'email_not_confirmed' || /confirm/i.test(err.message)) show("Confirmez d'abord votre e-mail (lien reçu après l'inscription).");
       else if (err.status === 400 || err.code === 'invalid_credentials') show('E-mail ou mot de passe incorrect.');
       else if (err.status === 429) show('Trop de tentatives. Réessayez dans quelques minutes.');
       else show('Connexion impossible pour le moment. Réessayez.');
     } finally { b.disabled = false; b.innerHTML = lab; }
+  });
+  addEventListener('resumed:device-locked', (e) => {
+    if (M.classList.contains('open')) return;          // la fenêtre de connexion affiche déjà l'erreur
+    open(); const x = $('#loginErr'); x.textContent = e.detail; x.classList.add('show');
   });
   $('#meBtn').onclick = (e) => { e.stopPropagation(); $('#me').classList.toggle('open'); };
   $('#meOut').onclick = async () => { $('#me').classList.remove('open'); await Session.logout(); toast('Vous êtes déconnecté.'); };
