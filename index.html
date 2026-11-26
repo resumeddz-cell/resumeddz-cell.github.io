@@ -633,9 +633,9 @@ body.on-course #coursePage,body.on-cadmin #adminCourses{display:block}
 .cv-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .cv-video.full{position:fixed;inset:0;z-index:9999;border-radius:0;aspect-ratio:auto}
 body.cv-lock{overflow:hidden}
-.wm{position:absolute;pointer-events:none;z-index:2;color:#fff;font:600 13px/1.2 "Outfit",sans-serif;text-shadow:0 0 3px rgba(0,0,0,.6);opacity:.42;white-space:nowrap;direction:ltr}
+.wm{position:absolute;pointer-events:none;z-index:2;color:#c2185b;font:700 14px/1.2 "Outfit",sans-serif;text-shadow:0 0 2px #fff,0 0 4px #fff,0 0 6px rgba(255,255,255,.9);opacity:.6;white-space:nowrap;direction:ltr}
 .wm-move{transition:top 1.6s ease,left 1.6s ease}
-.wm-corner{right:12px;bottom:52px;opacity:.28;font-size:11px}
+.wm-corner{right:12px;bottom:52px;opacity:.45;font-size:11px}
 .cv-full{position:absolute;z-index:3;top:10px;right:10px;width:38px;height:38px;border-radius:12px;border:0;background:rgba(0,0,0,.45);color:#fff;font-size:1.1rem;cursor:pointer}
 .cv-pdf{margin-top:16px;-webkit-user-select:none;user-select:none}
 .cv-pdf-h{font-weight:700;margin-bottom:10px}
@@ -2912,12 +2912,13 @@ var Courses = (function () {
     box.querySelector('.cv').innerHTML = `<div class="cv-head"><b>${esc(l.title)}</b><button type="button" class="cv-x" aria-label="Fermer">✕</button></div>
       ${m.video ? `<div class="cv-video" oncontextmenu="return false">
           <iframe src="${esc(m.video)}" title="${esc(l.title)}" loading="lazy" referrerpolicy="origin" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"></iframe>
-          <div class="wm wm-move" aria-hidden="true">${wm}</div><div class="wm wm-corner" aria-hidden="true">${wm}</div>
+          <div class="wm wm-move" aria-hidden="true">${wm}</div><div class="wm wm-move" aria-hidden="true">${wm}</div><div class="wm wm-corner" aria-hidden="true">${wm}</div>
           <button type="button" class="cv-full" aria-label="Plein écran">⛶</button></div>` : m.video_error ? `<p class="cp-load">${esc(m.video_error)}</p>` : ''}
       ${m.pdf ? `<div class="cv-pdf" oncontextmenu="return false"><div class="cv-pdf-h">📄 ${esc(m.pdf_name || 'Résumé PDF')}</div><div class="cv-pages"><p class="cp-load">Chargement du PDF…</p></div></div>` : ''}
       ${!m.video && !m.pdf && !m.video_error ? '<p class="cp-load">La vidéo de ce cours est en cours de préparation. Revenez dans quelques minutes.</p>' : ''}`;
-    const mv = box.querySelector('.wm-move');
-    if (mv) { const go = () => { mv.style.top = (6 + Math.random() * 78) + '%'; mv.style.left = (4 + Math.random() * 56) + '%'; }; go(); wmTimer = setInterval(go, 6000); }
+    // deux filigranes mobiles : un dans la moitié haute, un dans la moitié basse (jamais l'un sur l'autre)
+    const mv = [...box.querySelectorAll('.wm-move')];
+    if (mv.length) { const go = () => mv.forEach((el, i) => { el.style.top = (i ? 50 + Math.random() * 30 : 6 + Math.random() * 34) + '%'; el.style.left = (4 + Math.random() * 56) + '%'; }); go(); wmTimer = setInterval(go, 6000); }
     if (m.pdf) renderPdf(m.pdf, m.watermark || '', box.querySelector('.cv-pages'), l.id);
   }
   $('#coursePage').addEventListener('click', (e) => {
